@@ -1,5 +1,10 @@
 name: CI
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   SONAR_SCANNER_VERSION: 5.0.1.3006
 
@@ -25,13 +30,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Cache files
         uses: actions/cache@v4
         with:
           path: ~/.sonar
           key: ${{ runner.os }}-sonar
-          restore-keys: ${{ runner.os }}-sonar
+          restore-keys: |
+            ${{ runner.os }}-sonar
 
       # -----------------------------
       # CodeScan Analysis - Push
@@ -44,7 +52,7 @@ jobs:
           organization: test-perf
           projectKey: profiles-10-sarif
           codeScanUrl: https://perf.codescan.io/
-          login: squ_54a611313c8e294e75363ab8f4087a6e20902f8e
+          login: squ_d05ff7acb841ede62485bc3ae24259c4d9d9d773
 
           # SARIF generation enabled
           generateSarifFile: true
@@ -60,8 +68,7 @@ jobs:
           organization: test-perf
           projectKey: profiles-10-sarif
           codeScanUrl: https://perf.codescan.io/
-          login: squ_54a611313c8e294e75363ab8f4087a6e20902f8e
-
+          login: squ_d05ff7acb841ede62485bc3ae24259c4d9d9d773
           # SARIF generation enabled
           generateSarifFile: true
 
@@ -71,12 +78,23 @@ jobs:
             sonar.pullrequest.key=${{ github.event.number }}
 
       # -----------------------------
+      # Verify SARIF
+      # -----------------------------
+      - name: Verify SARIF file
+        run: |
+          echo "Checking SARIF file..."
+          pwd
+          ls -la
+          ls -lh codescan.sarif
+
+      # -----------------------------
       # SARIF Upload
       # -----------------------------
       - name: Upload SARIF file
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: codescan.sarif
+          wait-for-processing: true
 
       # -----------------------------
       # SARIF Artifact Upload
